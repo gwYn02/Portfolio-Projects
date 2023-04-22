@@ -49,6 +49,13 @@ SELECT neighbourhood_group, MAX(price) AS highest_price
 FROM nyc_airbnb
 GROUP BY neighbourhood_group;
 
+--TOP 10 Most Expensive Listings
+SELECT neighbourhood, MAX(price) AS most_expensive
+FROM nyc_airbnb
+GROUP BY neighbourhood
+ORDER BY most_expensive DESC
+FETCH FIRST 10 ROWS ONLY;
+
 --Average Price per Neighbourhood Group
 SELECT neighbourhood_group, ROUND(AVG(price), 2) AS average_price
 FROM nyc_airbnb
@@ -72,6 +79,24 @@ INNER JOIN(
 			FROM nyc_airbnb
 	 		GROUP BY neighbourhood_group, host_name) b
 GROUP BY neighbourhood_group) c
+ON a.neighbourhood_group = c.neighbourhood_group
+AND a.count_of_listings = c.maxcount
+ORDER BY a.count_of_listings DESC;
+
+--Host with Most Listings in each neighbourhood_group
+WITH listings_by_neighborhood_and_host AS (
+SELECT neighbourhood_group, host_name, COUNT(*) AS count_of_listings
+FROM nyc_airbnb
+GROUP BY neighbourhood_group, host_name
+),
+max_listings_per_neighborhood AS (
+SELECT neighbourhood_group, MAX(count_of_listings) AS maxcount
+FROM listings_by_neighborhood_and_host
+GROUP BY neighbourhood_group
+)
+SELECT a.neighbourhood_group, a.host_name, a.count_of_listings
+FROM listings_by_neighborhood_and_host a
+JOIN max_listings_per_neighborhood c
 ON a.neighbourhood_group = c.neighbourhood_group
 AND a.count_of_listings = c.maxcount
 ORDER BY a.count_of_listings DESC;
@@ -121,3 +146,20 @@ SELECT CASE EXTRACT(MONTH FROM last_review)
 FROM nyc_airbnb
 GROUP BY month
 ORDER BY MONTH;
+
+--Price vs NH average
+SELECT
+	neighbourhood_group,
+	neighbourhood,
+	price,
+	ROUND(AVG(price) OVER (PARTITION BY neighbourhood_group), 2) AS nh_average
+FROM nyc_airbnb;
+
+--Price Quartile
+SELECT
+	neighbourhood_group,
+	neighbourhood,
+	price,
+	NTILE(4) OVER (PARTITION BY neighbourhood_group ORDER BY price) AS quartile
+FROM nyc_airbnb;
+
